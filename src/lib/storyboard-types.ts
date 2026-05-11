@@ -1,9 +1,13 @@
+export const validPanelCounts = [6, 9, 12, 15, 24] as const;
+
+export type ValidPanelCount = (typeof validPanelCounts)[number];
+
 export type StoryboardScene = {
   id: string;
   title: string;
   sceneCode: string;
   durationSec: 15;
-  panelCount: 6 | 12 | 15 | 24;
+  panelCount: ValidPanelCount;
   panels: StoryboardPanel[];
 };
 

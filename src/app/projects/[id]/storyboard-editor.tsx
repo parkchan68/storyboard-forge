@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createMockStoryboardScene } from '@/lib/mock-storyboard';
 import {
   cameraAngleKo,
@@ -13,7 +13,9 @@ import {
   type CameraMovement,
   type ShotSize,
   type StoryboardPanel,
-  type StoryboardScene
+  validPanelCounts,
+  type StoryboardScene,
+  type ValidPanelCount
 } from '@/lib/storyboard-types';
 import { generatePanelTimecodes, recalculateTimecodesAfterReorder, validateSceneTiming } from '@/lib/timecode';
 
@@ -42,7 +44,15 @@ type StoryboardEditorProps = {
 };
 
 const locations = ['2학년 교실', '복도', '운동장', '교무실', '계단참'];
-const panelCountOptions = [6, 12, 15, 24] as const;
+const panelCountOptions = validPanelCounts;
+
+type CharacterReferenceImage = {
+  id: string;
+  name: string;
+  role: string;
+  appearanceNotes: string;
+  imageUrl: string;
+};
 
 type ExportRow = Record<string, string | number>;
 
@@ -191,7 +201,7 @@ function drawStoryboardCanvas(context: CanvasRenderingContext2D, scene: Storyboa
   context.font = '700 42px sans-serif';
   context.fillText(`${scene.sceneCode} · ${scene.title}`, 48, 70);
   context.font = '700 24px sans-serif';
-  context.fillText('Storyboard Forge · 15초 고정 · 24패널 기준 0.625초', 48, 112);
+  context.fillText(`Storyboard Forge · 15초 고정 · ${scene.panels.length}패널 균등 분배`, 48, 112);
 
   const columns = scene.panels.length >= 24 ? 6 : scene.panels.length === 15 ? 5 : 3;
   const gap = 16;
@@ -242,7 +252,7 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function makeBlankScene(panelCount: 6 | 12 | 15 | 24): StoryboardScene {
+function makeBlankScene(panelCount: ValidPanelCount): StoryboardScene {
   const timecodes = generatePanelTimecodes(panelCount, 15);
 
   return {
@@ -273,13 +283,40 @@ export function StoryboardEditor({ project }: StoryboardEditorProps) {
   const [selectedPanelId, setSelectedPanelId] = useState<string>('scene-01-panel-01');
   const [warning, setWarning] = useState<string>('');
   const [notice, setNotice] = useState<string>('준비 완료');
+  const [characterReferences, setCharacterReferences] = useState<CharacterReferenceImage[]>([]);
+  const [referencesLoaded, setReferencesLoaded] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
 
+  const storageKey = `storyboard-forge:${project.id}:character-references`;
   const selectedPanel = storyboardScene.panels.find((panel) => panel.id === selectedPanelId) ?? storyboardScene.panels[0];
+  const characterReferenceOptions = [
+    { id: 'default-kang-jaehoon', name: '강재훈', role: '주인공' },
+    ...project.characters.map((character) => ({ id: character.id, name: character.name, role: character.role })),
+    ...characterReferences.map((reference) => ({ id: reference.id, name: reference.name, role: reference.role }))
+  ];
+  const selectedCharacterReferenceImages = characterReferences.filter((reference) => selectedPanel?.characterRefs.includes(reference.name));
   const timingValidation = useMemo(
     () => validateSceneTiming(storyboardScene.panels, storyboardScene.durationSec),
     [storyboardScene]
   );
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(storageKey);
+      if (saved) {
+        setCharacterReferences(JSON.parse(saved) as CharacterReferenceImage[]);
+      }
+    } catch {
+      setCharacterReferences([]);
+    } finally {
+      setReferencesLoaded(true);
+    }
+  }, [storageKey]);
+
+  useEffect(() => {
+    if (!referencesLoaded) return;
+    window.localStorage.setItem(storageKey, JSON.stringify(characterReferences));
+  }, [characterReferences, referencesLoaded, storageKey]);
 
   function selectPanel(panelId: string) {
     setSelectedPanelId(panelId);
@@ -294,16 +331,17 @@ export function StoryboardEditor({ project }: StoryboardEditorProps) {
   }
 
   function generateMockStoryboard() {
-    const scene = createMockStoryboardScene();
+    const scene = createMockStoryboardScene(storyboardScene.panelCount);
     setStoryboardScene(scene);
     setSelectedPanelId(scene.panels[0].id);
-    setNotice('24개 패널 스토리보드를 15초 고정 타임코드로 생성했습니다.');
+    setNotice(`${scene.panelCount}개 패널 스토리보드를 15초 고정 타임코드로 생성했습니다.`);
     setWarning('');
   }
 
-  function changePanelCount(nextCount: 6 | 12 | 15 | 24) {
-    setStoryboardScene(makeBlankScene(nextCount));
-    setSelectedPanelId((current) => current || '');
+  function changePanelCount(nextCount: ValidPanelCount) {
+    const scene = makeBlankScene(nextCount);
+    setStoryboardScene(scene);
+    setSelectedPanelId(scene.panels[0].id);
     setNotice(`${nextCount}개 패널로 새 15초 장면을 준비했습니다.`);
   }
 
@@ -331,7 +369,7 @@ export function StoryboardEditor({ project }: StoryboardEditorProps) {
 
   function exportJson() {
     if (!validateForExport()) return;
-    const payload = { project, storyboardScene, exportedAt: new Date().toISOString() };
+    const payload = { project, storyboardScene, characterReferences, exportedAt: new Date().toISOString() };
     downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' }), 'storyboard-forge-15s.json');
   }
 
@@ -374,6 +412,55 @@ export function StoryboardEditor({ project }: StoryboardEditorProps) {
     window.print();
   }
 
+  function addCharacterReferenceImages(fileList: FileList | null) {
+    const files = Array.from(fileList ?? []);
+    if (files.length === 0) return;
+
+    Promise.all(files.map((file, index) => new Promise<CharacterReferenceImage>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        resolve({
+          id: `character-reference-${crypto.randomUUID()}`,
+          name: file.name.replace(/\.[^.]+$/, '') || `캐릭터 ${characterReferences.length + index + 1}`,
+          role: '역할 미정',
+          appearanceNotes: '',
+          imageUrl: String(reader.result)
+        });
+      };
+      reader.readAsDataURL(file);
+    }))).then((references) => {
+      setCharacterReferences((current) => [...current, ...references]);
+      setNotice(`${references.length}개의 캐릭터 레퍼런스 이미지를 추가했습니다.`);
+    });
+  }
+
+  function updateCharacterReference(referenceId: string, updates: Partial<Omit<CharacterReferenceImage, 'id' | 'imageUrl'>>) {
+    const previous = characterReferences.find((reference) => reference.id === referenceId);
+    setCharacterReferences((references) => references.map((reference) => (reference.id === referenceId ? { ...reference, ...updates } : reference)));
+
+    if (previous && updates.name && updates.name !== previous.name) {
+      setStoryboardScene((scene) => ({
+        ...scene,
+        panels: scene.panels.map((panel) => ({
+          ...panel,
+          characterRefs: panel.characterRefs.map((name) => (name === previous.name ? updates.name as string : name))
+        }))
+      }));
+    }
+  }
+
+  function deleteCharacterReference(reference: CharacterReferenceImage) {
+    setCharacterReferences((references) => references.filter((item) => item.id !== reference.id));
+    setStoryboardScene((scene) => ({
+      ...scene,
+      panels: scene.panels.map((panel) => ({
+        ...panel,
+        characterRefs: panel.characterRefs.filter((name) => name !== reference.name)
+      }))
+    }));
+    setNotice(`${reference.name} 레퍼런스를 삭제했습니다.`);
+  }
+
   function replaceImage(file: File | undefined) {
     if (!file) return;
     const reader = new FileReader();
@@ -414,7 +501,7 @@ export function StoryboardEditor({ project }: StoryboardEditorProps) {
     setNotice('패널을 삭제하고 15초 안에서 타임코드를 다시 계산했습니다.');
   }
 
-  const gridClass = storyboardScene.panels.length >= 24 ? 'grid-24' : storyboardScene.panels.length === 15 ? 'grid-15' : 'grid-flex';
+  const gridClass = storyboardScene.panels.length >= 24 ? 'grid-24' : storyboardScene.panels.length === 15 ? 'grid-15' : storyboardScene.panels.length === 9 ? 'grid-9' : 'grid-flex';
 
   return (
     <section className="storyboard-editor" aria-label="스토리보드 편집기">
@@ -429,7 +516,7 @@ export function StoryboardEditor({ project }: StoryboardEditorProps) {
           <button type="button" onClick={generateMockStoryboard}>스토리보드 생성</button>
           <label className="compact-select">
             패널 수
-            <select value={storyboardScene.panelCount} onChange={(event) => changePanelCount(Number(event.target.value) as 6 | 12 | 15 | 24)}>
+            <select value={storyboardScene.panelCount} onChange={(event) => changePanelCount(Number(event.target.value) as ValidPanelCount)}>
               {panelCountOptions.map((count) => <option key={count} value={count}>{count}개</option>)}
             </select>
           </label>
@@ -458,6 +545,37 @@ export function StoryboardEditor({ project }: StoryboardEditorProps) {
             ))}
             {project.characters.length === 0 ? <span>등록된 캐릭터가 없습니다.</span> : null}
           </div>
+
+          <h3>캐릭터 레퍼런스 이미지</h3>
+          <label className="file-button character-upload">
+            캐릭터 이미지 업로드
+            <input type="file" accept="image/*" multiple onChange={(event) => {
+              addCharacterReferenceImages(event.target.files);
+              event.currentTarget.value = '';
+            }} />
+          </label>
+          <div className="character-reference-list">
+            {characterReferences.map((reference) => (
+              <article className="character-reference-card" key={reference.id}>
+                <div className="reference-thumbnail" role="img" aria-label={`${reference.name} 캐릭터 레퍼런스`} style={{ backgroundImage: `url(${reference.imageUrl})` }} />
+                <label>
+                  캐릭터 이름
+                  <input value={reference.name} onChange={(event) => updateCharacterReference(reference.id, { name: event.target.value })} />
+                </label>
+                <label>
+                  역할
+                  <input value={reference.role} onChange={(event) => updateCharacterReference(reference.id, { role: event.target.value })} />
+                </label>
+                <label>
+                  외형 노트
+                  <textarea value={reference.appearanceNotes} onChange={(event) => updateCharacterReference(reference.id, { appearanceNotes: event.target.value })} rows={3} placeholder="머리, 의상, 분위기 등" />
+                </label>
+                <button type="button" className="danger-button small-button" onClick={() => deleteCharacterReference(reference)}>이미지 삭제</button>
+              </article>
+            ))}
+            {characterReferences.length === 0 ? <p className="empty-copy">캐릭터 레퍼런스 이미지를 업로드하면 여기에 썸네일과 메모가 표시됩니다.</p> : null}
+          </div>
+
           <h3>장소 레퍼런스</h3>
           <div className="asset-list">
             {locations.map((location) => <span key={location}>{location}</span>)}
@@ -554,10 +672,18 @@ export function StoryboardEditor({ project }: StoryboardEditorProps) {
                   value={selectedPanel.characterRefs}
                   onChange={(event) => updateSelectedPanel({ characterRefs: Array.from(event.target.selectedOptions).map((option) => option.value) })}
                 >
-                  <option value="강재훈">강재훈</option>
-                  {project.characters.map((character) => <option key={character.id} value={character.name}>{character.name}</option>)}
+                  {characterReferenceOptions.map((character) => <option key={character.id} value={character.name}>{character.name} · {character.role}</option>)}
                 </select>
               </label>
+              <div className="selected-character-references">
+                {selectedCharacterReferenceImages.map((reference) => (
+                  <figure key={reference.id}>
+                    <div className="reference-thumbnail" role="img" aria-label={`${reference.name} 선택된 캐릭터 레퍼런스`} style={{ backgroundImage: `url(${reference.imageUrl})` }} />
+                    <figcaption>{reference.name}</figcaption>
+                  </figure>
+                ))}
+                {selectedCharacterReferenceImages.length === 0 ? <p className="empty-copy">선택한 업로드 캐릭터 이미지가 없습니다.</p> : null}
+              </div>
               <label>
                 장소 레퍼런스
                 <select value={selectedPanel.locationRef ?? ''} onChange={(event) => updateSelectedPanel({ locationRef: event.target.value })}>

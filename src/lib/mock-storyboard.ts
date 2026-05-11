@@ -1,5 +1,5 @@
 import { generatePanelTimecodes } from './timecode';
-import type { CameraAngle, CameraMovement, ShotSize, StoryboardPanel, StoryboardScene } from './storyboard-types';
+import type { CameraAngle, CameraMovement, ShotSize, StoryboardPanel, StoryboardScene, ValidPanelCount } from './storyboard-types';
 
 const baseStyle = 'Realistic Korean live action thriller, no anime, no cartoon, no 3D render, no fantasy. Kang Jaehoon is a 17 year old Korean high school boy, lean athletic build, sharp narrow eyes, neat black hair, quiet intense expression, navy school blazer, white shirt, striped tie, name tag 강재훈, no glasses. Kim Yuseok with glasses must not appear. Male students only, no female students, do not duplicate Kang Jaehoon in the same panel, background students must not look like him.';
 
@@ -232,32 +232,36 @@ const panelSeeds: PanelSeed[] = [
   }
 ];
 
-export function createMockStoryboardScene(): StoryboardScene {
-  const timecodes = generatePanelTimecodes(24, 15);
-  const panels: StoryboardPanel[] = panelSeeds.map((seed, index) => ({
-    id: `scene-01-panel-${String(index + 1).padStart(2, '0')}`,
-    panelNumber: timecodes[index].panelNumber,
-    startSec: timecodes[index].startSec,
-    endSec: timecodes[index].endSec,
-    timecodeLabel: timecodes[index].timecodeLabel,
-    imagePromptEn: `${baseStyle} ${seed.imagePromptEn}`,
-    shotSize: seed.shotSize,
-    cameraAngle: seed.cameraAngle,
-    cameraMovement: seed.cameraMovement,
-    descriptionKo: seed.descriptionKo,
-    dialogueKo: seed.dialogueKo,
-    sfxKo: seed.sfxKo,
-    characterRefs: ['강재훈'],
-    locationRef: '2학년 교실',
-    notes: ''
-  }));
+export function createMockStoryboardScene(panelCount: ValidPanelCount = 24): StoryboardScene {
+  const timecodes = generatePanelTimecodes(panelCount, 15);
+  const panels: StoryboardPanel[] = timecodes.map((timecode, index) => {
+    const seed = panelSeeds[index % panelSeeds.length];
+
+    return {
+      id: `scene-01-panel-${String(index + 1).padStart(2, '0')}`,
+      panelNumber: timecode.panelNumber,
+      startSec: timecode.startSec,
+      endSec: timecode.endSec,
+      timecodeLabel: timecode.timecodeLabel,
+      imagePromptEn: `${baseStyle} ${seed.imagePromptEn}`,
+      shotSize: seed.shotSize,
+      cameraAngle: seed.cameraAngle,
+      cameraMovement: seed.cameraMovement,
+      descriptionKo: seed.descriptionKo,
+      dialogueKo: seed.dialogueKo,
+      sfxKo: seed.sfxKo,
+      characterRefs: ['강재훈'],
+      locationRef: '2학년 교실',
+      notes: ''
+    };
+  });
 
   return {
     id: 'mock-scene-01',
     title: '새 학년, 첫날',
     sceneCode: 'SCENE 01',
     durationSec: 15,
-    panelCount: 24,
+    panelCount,
     panels
   };
 }
