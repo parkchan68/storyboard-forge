@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  title       String
+  logline     String
+  audience    String?
+  styleGuide  String?
+  status      String   @default("IDEA")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  scenes      Scene[]
+  characters  Character[]
+
+  @@index([status])
+  @@index([updatedAt])
+}
+
+model Scene {
+  id          String   @id @default(cuid())
+  projectId   String
+  title       String
+  sequence    Int
+  location    String?
+  timeOfDay   String?
+  beat        String
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  shots       Shot[]
+
+  @@index([projectId, sequence])
+}
+
+model Shot {
+  id          String   @id @default(cuid())
+  sceneId     String
+  sequence    Int
+  title       String
+  shotType    String   @default("WIDE")
+  description String
+  lens        String?
+  movement    String?
+  duration    String?
+  status      String   @default("TODO")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  scene       Scene    @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+
+  @@index([sceneId, sequence])
+  @@index([status])
+}
+
+model Character {
+  id          String   @id @default(cuid())
+  projectId   String
+  name        String
+  role        String
+  motivation  String?
+  wardrobe    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
