@@ -1,4 +1,4 @@
-import type { SceneTimingValidation, StoryboardPanel } from './storyboard-types';
+import { validPanelCounts, type SceneTimingValidation, type StoryboardPanel } from './storyboard-types';
 
 export function formatTimecode(seconds: number) {
   const totalMs = Math.round(seconds * 1000);
@@ -14,10 +14,13 @@ export function formatTimecode(seconds: number) {
 
 export function generatePanelTimecodes(panelCount: number, durationSec = 15) {
   const panels = [];
+  const durationMs = Math.round(durationSec * 1000);
 
   for (let i = 0; i < panelCount; i++) {
-    const startSec = (durationSec * i) / panelCount;
-    const endSec = (durationSec * (i + 1)) / panelCount;
+    const startMs = Math.round((durationMs * i) / panelCount);
+    const endMs = i === panelCount - 1 ? durationMs : Math.round((durationMs * (i + 1)) / panelCount);
+    const startSec = startMs / 1000;
+    const endSec = endMs / 1000;
 
     panels.push({
       panelNumber: i + 1,
@@ -44,6 +47,10 @@ export function validateSceneTiming(panels: Pick<StoryboardPanel, 'startSec' | '
   if (panels.length === 0) {
     warnings.push('내보내기 전에 패널을 1개 이상 생성해야 합니다.');
     return { valid: false, warnings };
+  }
+
+  if (!validPanelCounts.includes(panels.length as (typeof validPanelCounts)[number])) {
+    warnings.push('패널 수는 6, 9, 12, 15, 24개 중 하나여야 합니다.');
   }
 
   const sortedPanels = [...panels].sort((a, b) => a.startSec - b.startSec);
