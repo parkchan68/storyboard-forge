@@ -1,0 +1,15 @@
+node_modules
+.next
+out
+dist
+.env
+.env*.local
+*.db
+*.db-journal
+*.sqlite
+*.sqlite-journal
+.DS_Store
+coverage
+.vercel
+
+tsconfig.tsbuildinfo
