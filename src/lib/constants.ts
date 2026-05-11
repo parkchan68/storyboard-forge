@@ -1,26 +1,26 @@
 export const projectStatusLabels = {
-  IDEA: 'Idea',
-  DRAFTING: 'Drafting',
-  READY_TO_SHOOT: 'Ready to shoot',
-  IN_PRODUCTION: 'In production',
-  COMPLETE: 'Complete'
+  IDEA: '아이디어',
+  DRAFTING: '작성 중',
+  READY_TO_SHOOT: '촬영 준비 완료',
+  IN_PRODUCTION: '제작 중',
+  COMPLETE: '완료'
 } as const;
 
 export const shotStatusLabels = {
-  TODO: 'To do',
-  BLOCKED: 'Blocked',
-  READY: 'Ready',
-  SHOT: 'Shot'
+  TODO: '할 일',
+  BLOCKED: '차단됨',
+  READY: '준비 완료',
+  SHOT: '촬영 완료'
 } as const;
 
 export const shotTypeLabels = {
-  WIDE: 'Wide',
-  MEDIUM: 'Medium',
-  CLOSE_UP: 'Close-up',
-  INSERT: 'Insert',
+  WIDE: '와이드',
+  MEDIUM: '미디엄',
+  CLOSE_UP: '클로즈업',
+  INSERT: '인서트',
   POV: 'POV',
-  AERIAL: 'Aerial',
-  OTHER: 'Other'
+  AERIAL: '항공',
+  OTHER: '기타'
 } as const;
 
 export type ProjectStatus = keyof typeof projectStatusLabels;

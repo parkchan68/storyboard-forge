@@ -53,8 +53,8 @@ async function nextShotSequence(sceneId: string) {
 export async function createProject(formData: FormData) {
   const project = await prisma.project.create({
     data: {
-      title: textValue(formData, 'title', 'Untitled project'),
-      logline: textValue(formData, 'logline', 'Add a concise project logline.'),
+      title: textValue(formData, 'title', '제목 없는 프로젝트'),
+      logline: textValue(formData, 'logline', '프로젝트 로그라인을 입력하세요.'),
       audience: optionalTextValue(formData, 'audience'),
       styleGuide: optionalTextValue(formData, 'styleGuide'),
       status: optionValue(projectStatusLabels, formData.get('status'), 'IDEA') as ProjectStatus
@@ -85,10 +85,10 @@ export async function createScene(formData: FormData) {
     data: {
       projectId,
       sequence,
-      title: textValue(formData, 'title', `Scene ${sequence}`),
+      title: textValue(formData, 'title', `장면 ${sequence}`),
       location: optionalTextValue(formData, 'location'),
       timeOfDay: optionalTextValue(formData, 'timeOfDay'),
-      beat: textValue(formData, 'beat', 'Describe the story beat for this scene.'),
+      beat: textValue(formData, 'beat', '이 장면의 스토리 비트를 설명하세요.'),
       notes: optionalTextValue(formData, 'notes')
     }
   });
@@ -105,9 +105,9 @@ export async function createShot(formData: FormData) {
     data: {
       sceneId,
       sequence,
-      title: textValue(formData, 'title', `Shot ${sequence}`),
+      title: textValue(formData, 'title', `샷 ${sequence}`),
       shotType: optionValue(shotTypeLabels, formData.get('shotType'), 'WIDE') as ShotType,
-      description: textValue(formData, 'description', 'Describe framing, action, and intent.'),
+      description: textValue(formData, 'description', '프레이밍, 액션, 의도를 설명하세요.'),
       lens: optionalTextValue(formData, 'lens'),
       movement: optionalTextValue(formData, 'movement'),
       duration: optionalTextValue(formData, 'duration'),
@@ -136,8 +136,8 @@ export async function createCharacter(formData: FormData) {
   await prisma.character.create({
     data: {
       projectId,
-      name: textValue(formData, 'name', 'Unnamed character'),
-      role: textValue(formData, 'role', 'Supporting role'),
+      name: textValue(formData, 'name', '이름 없는 캐릭터'),
+      role: textValue(formData, 'role', '조연'),
       motivation: optionalTextValue(formData, 'motivation'),
       wardrobe: optionalTextValue(formData, 'wardrobe')
     }

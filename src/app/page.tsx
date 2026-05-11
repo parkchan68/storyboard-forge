@@ -25,51 +25,50 @@ export default async function HomePage() {
     <main>
       <section className="hero">
         <div>
-          <p className="eyebrow">Local-first pre-production workspace</p>
+          <p className="eyebrow">로컬 우선 프리프로덕션 작업 공간</p>
           <h1>Storyboard Forge</h1>
           <p className="hero-copy">
-            Turn an idea into a shootable storyboard with projects, scenes, shot lists, characters, style notes,
-            and production status in one SQLite-backed Next.js app.
+            아이디어를 프로젝트, 장면, 샷 리스트, 캐릭터, 스타일 노트, 15초 고정 스토리보드로 정리하는 한국어 Next.js 앱입니다.
           </p>
-          <div className="metrics" aria-label="Workspace summary">
-            <span><strong>{projects.length}</strong> projects</span>
-            <span><strong>{projects.reduce((total, project) => total + project._count.scenes, 0)}</strong> scenes</span>
-            <span><strong>{shotCount}</strong> shots</span>
+          <div className="metrics" aria-label="작업 공간 요약">
+            <span><strong>{projects.length}</strong> 프로젝트</span>
+            <span><strong>{projects.reduce((total, project) => total + project._count.scenes, 0)}</strong> 장면</span>
+            <span><strong>{shotCount}</strong> 샷</span>
           </div>
         </div>
         <form action={createProject} className="panel form-card">
-          <h2>Create a project</h2>
+          <h2>프로젝트 만들기</h2>
           <label>
-            Title
-            <input name="title" placeholder="Brand film, short, launch video..." required />
+            제목
+            <input name="title" placeholder="브랜드 필름, 단편, 런칭 영상..." required />
           </label>
           <label>
-            Logline
-            <textarea name="logline" placeholder="A one-sentence promise for the story." required rows={3} />
+            로그라인
+            <textarea name="logline" placeholder="이야기를 한 문장으로 설명하세요." required rows={3} />
           </label>
           <label>
-            Audience
-            <input name="audience" placeholder="Who this is for" />
+            대상 관객
+            <input name="audience" placeholder="누구를 위한 영상인가요?" />
           </label>
           <label>
-            Visual style guide
-            <textarea name="styleGuide" placeholder="Lighting, palette, camera language, references" rows={3} />
+            비주얼 스타일 가이드
+            <textarea name="styleGuide" placeholder="조명, 색감, 카메라 언어, 레퍼런스" rows={3} />
           </label>
           <label>
-            Status
+            상태
             <select name="status" defaultValue="IDEA">
               {Object.entries(projectStatusLabels).map(([value, label]) => (
                 <option value={value} key={value}>{label}</option>
               ))}
             </select>
           </label>
-          <button type="submit">Forge storyboard</button>
+          <button type="submit">스토리보드 생성</button>
         </form>
       </section>
 
       <section className="section-heading">
-        <p className="eyebrow">Workspace</p>
-        <h2>Projects</h2>
+        <p className="eyebrow">작업 공간</p>
+        <h2>프로젝트</h2>
       </section>
 
       <section className="project-grid">
@@ -82,17 +81,17 @@ export default async function HomePage() {
               <h3>{project.title}</h3>
               <p>{project.logline}</p>
               <div className="card-meta">
-                <span>{project._count.scenes} scenes</span>
-                <span>{projectShotCount} shots</span>
-                <span>{project._count.characters} characters</span>
+                <span>{project._count.scenes}개 장면</span>
+                <span>{projectShotCount}개 샷</span>
+                <span>{project._count.characters}개 캐릭터</span>
               </div>
             </Link>
           );
         })}
         {projects.length === 0 ? (
           <div className="empty-state">
-            <h3>No projects yet</h3>
-            <p>Create your first storyboard project to start mapping scenes and shots.</p>
+            <h3>아직 프로젝트가 없습니다</h3>
+            <p>첫 스토리보드 프로젝트를 만들어 장면과 샷을 정리하세요.</p>
           </div>
         ) : null}
       </section>
