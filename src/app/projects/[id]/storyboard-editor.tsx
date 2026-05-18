@@ -239,6 +239,45 @@ function drawStoryboardCanvas(context: CanvasRenderingContext2D, scene: Storyboa
   });
 }
 
+
+function buildCharacterVisualIdentityPrompt(references: CharacterReferenceImage[]) {
+  const characterLines = references.length > 0
+    ? references.map((reference, index) => `- ${reference.name}: see attached reference image #${index + 1}`).join('\n')
+    : '- No character reference images are attached for this scene.';
+
+  return [
+    'CHARACTER VISUAL IDENTITY — REFERENCE IMAGES ONLY:',
+    'Each character listed below has an attached reference image showing their exact visual identity (face, body, hair, wardrobe).',
+    'Do NOT use any text description of their appearance — the reference image IS the complete and authoritative visual source.',
+    "Match each character's appearance to their attached reference image at 100% fidelity.",
+    '',
+    'Characters in this scene:',
+    characterLines,
+    '',
+    'The reference images contain everything needed to render the characters correctly.',
+    'No verbal description is necessary or provided — pure image-to-image matching.'
+  ].join('\n');
+}
+
+function buildImageSheetPromptParts(scene: StoryboardScene, panel: StoryboardPanel, references: CharacterReferenceImage[]) {
+  return [
+    buildCharacterVisualIdentityPrompt(references),
+    'BACKGROUND VISUAL IDENTITY — REFERENCE IMAGES ONLY:',
+    'Use attached background reference images as the authoritative source for location appearance.',
+    'Do NOT rely on verbal background appearance descriptions; text labels are only reference-matching keys.',
+    '',
+    `Scene: ${scene.sceneCode} · ${scene.title}`,
+    `Panel: #${String(panel.panelNumber).padStart(2, '0')} (${panel.timecodeLabel})`,
+    `Shot framing: ${panel.shotSize}, ${panel.cameraAngle}, ${panel.cameraMovement}`,
+    `Action and pose prompt: ${panel.imagePromptEn}`,
+    `Korean scene intent: ${panel.descriptionKo}`,
+    `Dialogue: ${panel.dialogueKo || 'none'}`,
+    `SFX: ${panel.sfxKo || 'none'}`,
+    `Location reference key: ${panel.locationRef || 'none'}`,
+    'Keep character identity matched from attached reference images only; do not add face, body, hair, or clothing descriptions.'
+  ];
+}
+
 function createPlaceholderImage(panelNumber: number) {
   return `linear-gradient(135deg, rgba(26,31,43,.96), rgba(42,56,78,.96)), radial-gradient(circle at 30% 20%, rgba(79,209,197,.35), transparent 36%), linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,0))`;
 }
@@ -301,16 +340,18 @@ export function StoryboardEditor({ project }: StoryboardEditorProps) {
   );
 
   useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(storageKey);
-      if (saved) {
-        setCharacterReferences(JSON.parse(saved) as CharacterReferenceImage[]);
+    queueMicrotask(() => {
+      try {
+        const saved = window.localStorage.getItem(storageKey);
+        if (saved) {
+          setCharacterReferences(JSON.parse(saved) as CharacterReferenceImage[]);
+        }
+      } catch {
+        setCharacterReferences([]);
+      } finally {
+        setReferencesLoaded(true);
       }
-    } catch {
-      setCharacterReferences([]);
-    } finally {
-      setReferencesLoaded(true);
-    }
+    });
   }, [storageKey]);
 
   useEffect(() => {
@@ -461,6 +502,14 @@ export function StoryboardEditor({ project }: StoryboardEditorProps) {
     setNotice(`${reference.name} 레퍼런스를 삭제했습니다.`);
   }
 
+  function generateSelectedPanelPrompt() {
+    const promptParts = buildImageSheetPromptParts(storyboardScene, selectedPanel, selectedCharacterReferenceImages);
+    const prompt = promptParts.join('\n\n');
+
+    void navigator.clipboard?.writeText(prompt);
+    setNotice('선택 패널 이미지 시트 프롬프트를 클립보드에 복사했습니다. 캐릭터 외형은 첨부 레퍼런스 이미지만 사용하도록 지정했습니다.');
+  }
+
   function replaceImage(file: File | undefined) {
     if (!file) return;
     const reader = new FileReader();
@@ -567,8 +616,8 @@ export function StoryboardEditor({ project }: StoryboardEditorProps) {
                   <input value={reference.role} onChange={(event) => updateCharacterReference(reference.id, { role: event.target.value })} />
                 </label>
                 <label>
-                  외형 노트
-                  <textarea value={reference.appearanceNotes} onChange={(event) => updateCharacterReference(reference.id, { appearanceNotes: event.target.value })} rows={3} placeholder="머리, 의상, 분위기 등" />
+                  외형 노트 (참고용 — AI 이미지 생성에는 사용되지 않음. 시각 참조는 캐릭터 시트 이미지로만 처리됩니다)
+                  <textarea value={reference.appearanceNotes} onChange={(event) => updateCharacterReference(reference.id, { appearanceNotes: event.target.value })} rows={3} placeholder="참고 메모만 입력하세요. 이미지 생성 프롬프트에는 포함되지 않습니다." />
                 </label>
                 <button type="button" className="danger-button small-button" onClick={() => deleteCharacterReference(reference)}>이미지 삭제</button>
               </article>
@@ -630,7 +679,7 @@ export function StoryboardEditor({ project }: StoryboardEditorProps) {
                 이미지 교체
                 <input type="file" accept="image/*" onChange={(event) => replaceImage(event.target.files?.[0])} />
               </label>
-              <button type="button" onClick={() => setNotice('이미지 생성 API는 이후 연결 예정입니다.')}>선택 패널 재생성</button>
+              <button type="button" onClick={generateSelectedPanelPrompt}>선택 패널 프롬프트 복사</button>
               <label>
                 샷 사이즈
                 <select value={selectedPanel.shotSize} onChange={(event) => updateSelectedPanel({ shotSize: event.target.value as ShotSize })}>

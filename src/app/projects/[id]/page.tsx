@@ -133,8 +133,8 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             <textarea name="motivation" rows={2} placeholder="이 인물 또는 요소가 전달하려는 것" />
           </label>
           <label>
-            의상 / 디자인 노트
-            <textarea name="wardrobe" rows={2} placeholder="색상, 소재, 소품, 시각 디테일" />
+            의상 / 디자인 노트 (참고용 — AI 이미지 생성에는 사용되지 않음. 시각 참조는 캐릭터 시트 이미지로만 처리됩니다)
+            <textarea name="wardrobe" rows={2} placeholder="참고 메모만 입력하세요. 이미지 생성 프롬프트에는 포함되지 않습니다." />
           </label>
           <button type="submit">캐릭터 추가</button>
         </form>
@@ -252,7 +252,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
             <h3>{character.name}</h3>
             <p><strong>역할:</strong> {character.role}</p>
             <p><strong>동기:</strong> {character.motivation || '미정'}</p>
-            <p><strong>의상 / 디자인:</strong> {character.wardrobe || '미정'}</p>
+            <p><strong>의상 / 디자인 (참고용 — AI 이미지 생성에는 사용되지 않음):</strong> {character.wardrobe || '미정'}</p>
           </article>
         ))}
         {project.characters.length === 0 ? <p className="empty-copy">아직 캐릭터가 없습니다.</p> : null}
